@@ -39,7 +39,7 @@ struct Data {
 }
 
 #[derive(serde::Deserialize, Debug)]
-struct OriginData {
+struct DetailedData {
     presses: Vec<u32>,
     #[allow(dead_code)]
     #[serde(rename = "Xs")]
@@ -47,6 +47,19 @@ struct OriginData {
     #[allow(dead_code)]
     #[serde(rename = "Ls")]
     ls: Vec<u32>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct OriginData {
+    #[allow(dead_code)]
+    sum_presses: u32,
+    #[allow(dead_code)]
+    #[serde(rename = "sum_Ls")]
+    sum_ls: u32,
+    #[allow(dead_code)]
+    #[serde(rename = "sum_Xs")]
+    sum_xs: u32,
+    detailed: DetailedData,
 }
 
 #[tauri::command]
@@ -68,13 +81,13 @@ async fn get_data(path: &str, column_ids: Vec<usize>) -> Result<Vec<Vec<Data>>> 
     }).collect::<Vec<_>>();
     let n = records.len();
     if n < 2 {
-        return Err(Error::InvalidParameter("Data is not enough".to_owned()));
+        return Err(Error::InvalidParameter("Valid data is not enough".to_owned()));
     }
 
-    let mut result = records[0].iter().map(|data| vec![Data { avg: 0.0, se: 0.0 }; data.presses.len()]).collect::<Vec<_>>();
+    let mut result = records[0].iter().map(|data| vec![Data { avg: 0.0, se: 0.0 }; data.detailed.presses.len()]).collect::<Vec<_>>();
     records.iter().for_each(|record| {
         record.iter().enumerate().for_each(|(i, data)| {
-            data.presses.iter().enumerate().for_each(|(j, press)| {
+            data.detailed.presses.iter().enumerate().for_each(|(j, press)| {
                 result[i][j].avg += *press as f64 / n as f64;
             });
         });
@@ -83,14 +96,14 @@ async fn get_data(path: &str, column_ids: Vec<usize>) -> Result<Vec<Vec<Data>>> 
     let sqrt_n = (n as f64).sqrt();
     records.iter().for_each(|record| {
         record.iter().enumerate().for_each(|(i, data)| {
-            data.presses.iter().enumerate().for_each(|(j, press)| {
+            data.detailed.presses.iter().enumerate().for_each(|(j, press)| {
                 result[i][j].se += (*press as f64 - result[i][j].avg).powi(2) / (n - 1) as f64;
             });
         });
     });
     records.iter().for_each(|record| {
         record.iter().enumerate().for_each(|(i, data)| {
-            data.presses.iter().enumerate().for_each(|(j, _)| {
+            data.detailed.presses.iter().enumerate().for_each(|(j, _)| {
                 result[i][j].se = result[i][j].se.sqrt() / sqrt_n;
             });
         });
