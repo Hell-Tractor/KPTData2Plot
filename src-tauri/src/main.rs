@@ -3,6 +3,7 @@
 use std::{fs::File, io::Write};
 
 use base64::Engine;
+use futures::future::try_join_all;
 use tauri::InvokeError;
 
 #[derive(thiserror::Error, Debug)]
@@ -38,7 +39,7 @@ struct Data {
     se: f64,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 struct DetailedData {
     presses: Vec<u32>,
     #[allow(dead_code)]
@@ -49,17 +50,52 @@ struct DetailedData {
     ls: Vec<u32>,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 struct OriginData {
     #[allow(dead_code)]
+    #[serde(alias = "score")]    // for compatibility
     sum_presses: u32,
     #[allow(dead_code)]
-    #[serde(rename = "sum_Ls")]
+    #[serde(default, rename = "sum_Ls")]
     sum_ls: u32,
     #[allow(dead_code)]
-    #[serde(rename = "sum_Xs")]
+    #[serde(default, rename = "sum_Xs")]
     sum_xs: u32,
+    #[serde(alias = "data")]
     detailed: DetailedData,
+
+    // for compatibility
+    #[allow(dead_code)]
+    #[serde(default)]
+    seconds: u32,
+    #[allow(dead_code)]
+    #[serde(default, rename="colorId")]
+    color_id: u32,
+}
+
+async fn parse_column_data(origin_data: &Vec<OriginData>, column_id: usize) -> Result<Vec<Data>> {
+    let n = origin_data.len();
+    if n < 2 {
+        return Err(Error::InvalidParameter(format!("Valid data is not enough for column {}", n)));
+    }
+    let mut result = vec![Data { avg: 0.0, se: 0.0 }; origin_data[0].detailed.presses.len()];
+    for data in origin_data {
+        if data.detailed.presses.len() != result.len() {
+            return Err(Error::InvalidParameter(format!("Data length is not equal for column {}", column_id)));
+        }
+        data.detailed.presses.iter().enumerate().for_each(|(i, press)| {
+            result[i].avg += *press as f64 / n as f64;
+        });
+    }
+    for data in origin_data {
+        data.detailed.presses.iter().enumerate().for_each(|(i, press)| {
+            result[i].se += (*press as f64 - result[i].avg).powi(2) / (n - 1) as f64;
+        });
+    }
+    result.iter_mut().for_each(|data| {
+        data.se = (data.se / n as f64).sqrt();
+    });
+    Ok(result)
 }
 
 #[tauri::command]
@@ -69,47 +105,21 @@ async fn get_data(path: &str, column_ids: Vec<usize>) -> Result<Vec<Vec<Data>>> 
     }
     let file = File::open(path)?;
     let mut reader = csv::Reader::from_reader(file);
-    // let mut data = Vec::new().resize(column_ids.len(), Vec::<Data>::new());
-    let records = reader.records().filter_map(|record| {
-        let record = record.ok()?;
-        let datas = column_ids.iter().filter_map(|id| serde_json::from_str(&record.get(*id)?).ok()).collect::<Vec<OriginData>>();
-        // println!("{:?}", serde_json::from_str::<OriginData>(&record.get(column_ids[0])?));
-        if datas.len() != column_ids.len() {
-            return None;
+
+    let mut records: Vec<Vec<OriginData>> = vec![Vec::new(); column_ids.len()];
+    for record in reader.records() {
+        let record = record?;
+        for (idx, id) in column_ids.iter().enumerate() {
+            let Ok(data) = serde_json::from_str(&record.get(*id).ok_or(Error::InvalidParameter(format!("column id {}", id)))?) else {
+                continue;
+            };
+            records[idx].push(data);
         }
-        Some(datas)
-    }).collect::<Vec<_>>();
-    let n = records.len();
-    if n < 2 {
-        return Err(Error::InvalidParameter("Valid data is not enough".to_owned()));
     }
-
-    let mut result = records[0].iter().map(|data| vec![Data { avg: 0.0, se: 0.0 }; data.detailed.presses.len()]).collect::<Vec<_>>();
-    records.iter().for_each(|record| {
-        record.iter().enumerate().for_each(|(i, data)| {
-            data.detailed.presses.iter().enumerate().for_each(|(j, press)| {
-                result[i][j].avg += *press as f64 / n as f64;
-            });
-        });
-    });
-
-    let sqrt_n = (n as f64).sqrt();
-    records.iter().for_each(|record| {
-        record.iter().enumerate().for_each(|(i, data)| {
-            data.detailed.presses.iter().enumerate().for_each(|(j, press)| {
-                result[i][j].se += (*press as f64 - result[i][j].avg).powi(2) / (n - 1) as f64;
-            });
-        });
-    });
-    records.iter().for_each(|record| {
-        record.iter().enumerate().for_each(|(i, data)| {
-            data.detailed.presses.iter().enumerate().for_each(|(j, _)| {
-                result[i][j].se = result[i][j].se.sqrt() / sqrt_n;
-            });
-        });
-    });
-
-    Ok(result)
+    try_join_all(records.iter()
+        .zip(column_ids.iter())
+        .map(|(data, id)| parse_column_data(data, *id))
+    ).await
 }
 
 #[tauri::command]

@@ -32,7 +32,8 @@ function get_filtered_data_sources() : string[] {
   if (dataSourceFilter.value === "") {
     return props.dataSources;
   }
-  return props.dataSources.filter((dataSource) => dataSource.includes(dataSourceFilter.value));
+  var keywords = dataSourceFilter.value.toLowerCase().split(" ");
+  return props.dataSources.filter((dataSource) => keywords.every((keyword) => dataSource.toLowerCase().includes(keyword)));
 }
 </script>
 
