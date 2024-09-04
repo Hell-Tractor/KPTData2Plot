@@ -24,6 +24,8 @@ function add_empty_curve() : void {
     sourceName: "",
     lineColor: get_random_color(),
     fillColor: get_random_color(),
+    unit: 1,
+    maxLength: 0,
     data: []
   });
 }
@@ -41,8 +43,10 @@ function get_filtered_data_sources() : string[] {
   <v-table>
     <thead>
       <tr>
-        <th style="width: 50%;">Curve Name</th>
-        <th style="width: 50%;">Data Source</th>
+        <th style="width: 20%;">Curve Name</th>
+        <th style="width: 20%;">Data Source</th>
+        <th style="width: 100px;">Unit</th>
+        <th style="width: 100px;">Max Length</th>
         <th style="width: 50px;">Line Color</th>
         <th style="width: 50px;">Fill Color</th>
         <th style="width: 30px;">Delete</th>
@@ -63,6 +67,12 @@ function get_filtered_data_sources() : string[] {
               </v-tooltip>
             </template>
           </v-select>
+        </td>
+        <td>
+          <v-text-field class="padding-top" v-model.number="curve.unit" density="compact" type="number"></v-text-field>
+        </td>
+        <td>
+          <v-text-field class="padding-top" v-model.number="curve.maxLength" density="compact" type="number"></v-text-field>
         </td>
         <td>
           <ColorPickDialog v-model="curve.lineColor">

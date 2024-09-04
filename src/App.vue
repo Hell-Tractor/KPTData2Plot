@@ -6,21 +6,23 @@ import CurveConfigPanel from './components/CurveConfigPanel.vue';
 import PlotConfigPanel from './components/PlotConfigPanel.vue';
 import { draw_plot } from './plot';
 
-export interface PlotData {
-  title: string;
-  curves: CurveData[];
-  chart: echarts.ECharts | null;
-}
-
 export interface CurveData {
   name: string;
   sourceName: string;
   lineColor: string;
   fillColor: string;
+  unit: number;
+  maxLength: number;
   data: {
     avg: number;
     se: number;
   }[];
+}
+
+export interface PlotData {
+  title: string;
+  curves: CurveData[];
+  chart: echarts.ECharts | null;
 }
 
 const filePath: Ref<string | null> = ref(null);
@@ -74,10 +76,18 @@ async function process() : Promise<void> {
 async function draw() : Promise<void> {
   isDrawing.value = true;
   let curves = plotDatas.value.flatMap((plotData) => plotData.curves).filter((curve, index, self) => self.indexOf(curve) === index);
+  let configs = curves.map((curve) => {
+    return {
+      column_id: excelHeaders.value.indexOf(curve.sourceName),
+      unit: curve.unit,
+      max_length: curve.maxLength,
+    };
+  })
   let ids = curves.map((curve) => excelHeaders.value.indexOf(curve.sourceName));
   console.log("curves", curves);
   console.log("ids", ids);
-  invoke("get_data", { path: filePath.value, columnIds: ids }).then((result) => {
+  console.log("configs", configs);
+  invoke("get_data", { path: filePath.value, curveConfigs: configs }).then((result) => {
     let datas = result as { avg: number, se: number }[][];
     console.log("result", result);
     showPlot.value = true;
