@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { Ref } from 'vue';
+import { ref, Ref } from 'vue';
 import { CurveData } from '../App.vue';
 import ColorPickDialog from './ColorPickDialog.vue';
 import { rules } from '../Rules';
 
-defineProps<{ dataSources: string[] }>();
+const props = defineProps<{ dataSources: string[] }>();
 
 const curves: Ref<CurveData[]> = defineModel({ type: Array<CurveData>, required: true });
 
 const emits = defineEmits<{
   remove_curve: [CurveData]
 }>();
+
+const dataSourceFilter: Ref<string> = ref("");
 
 function get_random_color() : string {
   return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, "0");
@@ -24,6 +26,13 @@ function add_empty_curve() : void {
     fillColor: get_random_color(),
     data: []
   });
+}
+
+function get_filtered_data_sources() : string[] {
+  if (dataSourceFilter.value === "") {
+    return props.dataSources;
+  }
+  return props.dataSources.filter((dataSource) => dataSource.includes(dataSourceFilter.value));
 }
 </script>
 
@@ -44,7 +53,11 @@ function add_empty_curve() : void {
           <v-text-field class="padding-top" v-model="curve.name" density="compact" :rules="[rules.required]"></v-text-field>
         </td>
         <td>
-          <v-select class="padding-top" v-model="curve.sourceName" :items="dataSources" density="compact"></v-select>
+          <v-select class="padding-top" v-model="curve.sourceName" :items="get_filtered_data_sources()" density="compact">
+            <template v-slot:prepend-item>
+              <v-text-field placeholder="Filter" v-model="dataSourceFilter"></v-text-field>
+            </template>
+          </v-select>
         </td>
         <td>
           <ColorPickDialog v-model="curve.lineColor">
