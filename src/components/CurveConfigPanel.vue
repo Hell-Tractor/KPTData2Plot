@@ -56,7 +56,11 @@ function get_filtered_data_sources() : string[] {
         <td>
           <v-select class="padding-top" v-model="curve.sourceName" :items="get_filtered_data_sources()" density="compact">
             <template v-slot:prepend-item>
-              <v-text-field placeholder="Filter" v-model="dataSourceFilter"></v-text-field>
+              <v-tooltip text="Ignore case; Space to separate keywords">
+                <template v-slot:activator="{ props }">
+                  <v-text-field v-bind="props" placeholder="Filter" v-model="dataSourceFilter"></v-text-field>
+                </template>
+              </v-tooltip>
             </template>
           </v-select>
         </td>
