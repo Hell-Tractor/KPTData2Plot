@@ -14,7 +14,7 @@ const selected_color: Ref<string> = ref(model_color.value);
         <template v-slot:default="{ isActive }">
             <v-card>
                 <v-card-text>
-                    <v-color-picker elevation="0" width="100%" v-model="selected_color" mode="rgb"></v-color-picker>
+                    <v-color-picker elevation="0" width="100%" v-model="selected_color" mode="rgba"></v-color-picker>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>

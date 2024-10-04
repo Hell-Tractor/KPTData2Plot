@@ -11,7 +11,9 @@ function add_empty_plot() : void {
   plotDatas.value.push({
     title: "",
     curves: [],
-    chart: null
+    chart: null,
+    xStep: 1,
+    yStep: 1
   });
 }
 </script>
@@ -20,8 +22,10 @@ function add_empty_plot() : void {
   <v-table>
     <thead>
       <tr>
-        <th style="width: 40%;">Title</th>
-        <th style="width: 60%;">Curves</th>
+        <th style="width: 30%;">Title</th>
+        <th style="width: 30%;">Curves</th>
+        <th style="width: 100px;">X Step</th>
+        <th style="width: 100px;">Y Step</th>
         <th style="width: 30px;">Delete</th>
       </tr>
     </thead>
@@ -32,6 +36,12 @@ function add_empty_plot() : void {
         </td>
         <td>
           <v-select class="padding-top" v-model="plotData.curves" :items="curves" item-title="name" return-object multiple density="compact" chips></v-select>
+        </td>
+        <td>
+          <v-text-field class="padding-top" v-model.number="plotData.xStep" type="number" density="compact" :rules="[rules.required]"></v-text-field>
+        </td>
+        <td>
+          <v-text-field class="padding-top" v-model.number="plotData.yStep" type="number" density="compact" :rules="[rules.required]"></v-text-field>
         </td>
         <td>
           <v-btn icon="mdi-delete" @click="plotDatas.splice(index, 1)" variant="flat"></v-btn>

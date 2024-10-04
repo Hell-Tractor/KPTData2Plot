@@ -23,6 +23,8 @@ export interface PlotData {
   title: string;
   curves: CurveData[];
   chart: echarts.ECharts | null;
+  xStep: number;
+  yStep: number;
 }
 
 const filePath: Ref<string | null> = ref(null);

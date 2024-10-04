@@ -41,6 +41,8 @@ export async function draw_plot(data: PlotData) : Promise<void> {
         }]
     })
     console.log(series);
+    if (data.xStep < 2)
+        data.xStep = 2;
 
     data.chart.setOption({
         title: {
@@ -48,10 +50,14 @@ export async function draw_plot(data: PlotData) : Promise<void> {
             left: 'center'
         },
         xAxis: {
-            type: 'category'
+            type: 'category',
+            axisLabel: {
+                interval: data.xStep - 1
+            }
         },
         yAxis: {
-            type: 'value'
+            type: 'value',
+            interval: data.yStep
         },
         series: series
     })
