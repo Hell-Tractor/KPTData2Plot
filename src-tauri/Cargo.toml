@@ -1,6 +1,6 @@
 [package]
 name = "kptdata2plot"
-version = "0.3.0"
+version = "0.3.1"
 description = "A Tauri App"
 authors = ["Hell-Tractor"]
 edition = "2021"
